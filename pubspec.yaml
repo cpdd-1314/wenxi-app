@@ -60,6 +60,8 @@ flutter:
     - assets/licenses/
     - assets/support/appreciation-code.png
 dependency_overrides:
+  # image 4.11.0 需要 update Dart SDK 的 ZLibDecoder.decodeLazy，锁定 4.10.1
+  image: 4.10.1
   desktop_drop:
     path: vendor_plugins/desktop_drop
   file_selector_android:
