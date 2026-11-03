@@ -18,6 +18,7 @@ class KamiGate extends StatefulWidget {
     required this.savedCode,
     required this.onPassed,
     this.onSave,
+    this.deviceReady,
   });
 
   final KamiService service;
@@ -30,6 +31,9 @@ class KamiGate extends StatefulWidget {
 
   /// 保存卡密到本地，供下次启动自动校验；同时带上校验结果（含到期信息）。
   final Future<void> Function(String code, KamiResult result)? onSave;
+
+  /// 设备号就绪信号；发起任何请求前先等它，避免首包缺 `device` 字段。
+  final Future<void>? deviceReady;
 
   @override
   State<KamiGate> createState() => _KamiGateState();
@@ -80,7 +84,11 @@ class _KamiGateState extends State<KamiGate> {
       _error = null;
     });
     try {
-      final result = await widget.service.verify(value);
+      await widget.deviceReady;
+      // 自动复核走 /check（不重复计时）；手动输入的卡密走 /verify（首次激活）。
+      final result = auto
+          ? await widget.service.check(value)
+          : await widget.service.verify(value);
       if (!mounted) return;
       if (result.ok) {
         await widget.onSave?.call(value, result);

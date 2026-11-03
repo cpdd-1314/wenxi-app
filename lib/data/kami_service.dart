@@ -5,19 +5,24 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
 /// 卡密校验服务地址与应用标识。
-const kamiVerifyUrl = 'https://kami-5i14.onrender.com/api/app/verify';
+const kamiBaseUrl = 'https://kami-5i14.onrender.com';
 const kamiAppId = 'app-wangpen';
 
 /// 校验结果。服务端约定：`ok` 为真时放行，同时可选返回到期信息。
 class KamiResult {
   const KamiResult({
     required this.ok,
+    this.key = '',
     this.message = '',
     this.expireText = '',
     this.daysLeft,
   });
 
   final bool ok;
+
+  /// 服务端返回的卡密状态（`invalid` / `net` / 其他）。
+  final String key;
+
   final String message;
 
   /// 服务端返回的到期时间文本，例如 `2026-12-31 23:59`。
@@ -74,6 +79,7 @@ class KamiResult {
     final days = data['days_left'];
     return KamiResult(
       ok: data['ok'] == true,
+      key: (data['key'] ?? '').toString().trim(),
       message: (data['message'] ?? '').toString().trim(),
       expireText: (data['expire_text'] ?? '').toString().trim(),
       daysLeft: days is num ? days.toInt() : int.tryParse('${days ?? ''}'),
@@ -89,9 +95,17 @@ class KamiException implements Exception {
   String toString() => message;
 }
 
+/// 卡密校验服务。
+///
+/// 与服务端约定（见卡密后台接入文档）：
+/// - `/api/app/verify`：首次激活，开始计时；成功后服务端绑定设备。
+/// - `/api/app/check`：启动/定时复核，不重复计时。
+/// - 两者都要求 JSON body `{code, app, device}`，并带
+///   `X-Kami-Code` / `X-Kami-App` / `X-Kami-Device` 三个请求头。
 class KamiService {
-  KamiService({Dio? dio})
-    : _dio =
+  KamiService({Dio? dio, String? deviceId})
+    : _deviceId = deviceId ?? '' ,
+      _dio =
           dio ??
           Dio(
             BaseOptions(
@@ -107,17 +121,30 @@ class KamiService {
 
   final Dio _dio;
 
-  Future<KamiResult> verify(String code) async {
-    final trimmed = code.trim();
-    if (trimmed.isEmpty) {
-      throw const KamiException('请输入卡密');
-    }
+  /// 设备唯一标识，由调用方在启动时注入（Android 用 ANDROID_ID，
+  /// 桌面端用持久化的随机 ID）。为空时退化为只带请求头。
+  String _deviceId;
+
+  set deviceId(String value) => _deviceId = value;
+
+  Map<String, String> _headers(String code) => {
+    'X-Kami-Code': code,
+    'X-Kami-App': kamiAppId,
+    if (_deviceId.isNotEmpty) 'X-Kami-Device': _deviceId,
+  };
+
+  Map<String, dynamic> _body(String code) => {
+    'code': code,
+    'app': kamiAppId,
+    if (_deviceId.isNotEmpty) 'device': _deviceId,
+  };
+
+  Future<KamiResult> _post(String path, String code) async {
     try {
       final response = await _dio.post<Object?>(
-        kamiVerifyUrl,
-        options: Options(
-          headers: {'X-Kami-Code': trimmed, 'X-Kami-App': kamiAppId},
-        ),
+        kamiBaseUrl + path,
+        options: Options(headers: _headers(code)),
+        data: _body(code),
       );
       final result = KamiResult.fromJson(response.data);
       if (result.ok) return result;
@@ -128,6 +155,7 @@ class KamiService {
       }
       return KamiResult(
         ok: false,
+        key: result.key,
         message: result.message.isEmpty ? '卡密无效' : result.message,
         expireText: result.expireText,
         daysLeft: result.daysLeft,
@@ -135,13 +163,21 @@ class KamiService {
     } on KamiException {
       rethrow;
     } on DioException catch (error) {
-      debugPrint('kami verify failed: $error');
+      debugPrint('kami request failed: $error');
       throw KamiException(_describe(error));
     } catch (error) {
-      debugPrint('kami verify failed: $error');
+      debugPrint('kami request failed: $error');
       throw const KamiException('验证失败，请检查网络后重试');
     }
   }
+
+  /// 首次激活（开始计时）。成功后服务端记录设备绑定。
+  Future<KamiResult> verify(String code) =>
+      _post('/api/app/verify', code.trim().toUpperCase());
+
+  /// 启动/定时复核，不重复计时。
+  Future<KamiResult> check(String code) =>
+      _post('/api/app/check', code.trim().toUpperCase());
 
   static String _describe(DioException error) {
     if (error.type == DioExceptionType.connectionTimeout ||

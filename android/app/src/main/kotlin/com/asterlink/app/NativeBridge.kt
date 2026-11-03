@@ -279,6 +279,20 @@ class NativeBridge(private val context: Context, engine: FlutterEngine) {
         executor.execute {
             try {
                 val value: Any? = when (call.method) {
+                    "androidDeviceId" -> {
+                        val sp = context.getSharedPreferences("kami_prefs", android.content.Context.MODE_PRIVATE)
+                        sp.getString("kami_device", null) ?: run {
+                            val id = try {
+                                android.provider.Settings.Secure.getString(
+                                    context.contentResolver,
+                                    android.provider.Settings.Secure.ANDROID_ID,
+                                ).orEmpty()
+                            } catch (_: Exception) { "" }
+                            val v = id.ifEmpty { "kt-" + java.util.UUID.randomUUID().toString() }
+                            sp.edit().putString("kami_device", v).apply()
+                            v
+                        }
+                    }
                     "prepareAppUpdate" -> AppUpdatePackage(context).prepare(
                         call.argument<String>("path").orEmpty(),
                         call.argument<String>("version").orEmpty(),

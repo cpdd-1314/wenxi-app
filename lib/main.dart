@@ -164,9 +164,11 @@ class AsterLinkApp extends StatefulWidget {
 }
 
 class _AsterLinkAppState extends State<AsterLinkApp> {
-  /// 本地保存的卡密键名与到期时间键名。
+  /// 本地保存的卡密键名、到期时间键名与设备号键名。
   static const _kamiKey = 'kamiCode';
   static const _kamiExpireKey = 'kamiExpire';
+  static const _kamiDeviceKey = 'kamiDevice';
+  static const _kamiGuardInterval = Duration(minutes: 5);
   late final KamiService _kami =
       widget.kamiService ?? KamiService();
   late String _savedKami = widget.services.store.data.str(_kamiKey);
@@ -174,11 +176,73 @@ class _AsterLinkAppState extends State<AsterLinkApp> {
   /// 校验通过的卡密；为空时停留在验证页。每次冷启动重新置空，重新验证。
   String? _passedKami;
 
+  /// 定时复核卡密的守护定时器；失效时把界面锁回验证页。
+  Timer? _kamiGuard;
+
+  /// 设备号就绪信号，卡密请求都要等它完成后再发。
+  final Completer<void> _kamiDeviceReady = Completer<void>();
+
   Future<void> _saveKami(String code, KamiResult result) async {
     _savedKami = code;
     await widget.services.store.put(_kamiKey, code);
     // 只持久化到期时间文本，剩余天数展示时动态计算。
     await widget.services.store.put(_kamiExpireKey, result.expireText);
+    _startKamiGuard(code);
+  }
+
+  /// 解析设备唯一标识：Android 用系统 ANDROID_ID（重启/重装不变，
+  /// 经原生通道读取并持久化），桌面端用本地持久化的随机 ID。
+  Future<void> _initKamiDevice() async {
+    final store = widget.services.store;
+    var id = store.data.str(_kamiDeviceKey);
+    try {
+      if (Platform.isAndroid) {
+        const channel = MethodChannel('com.asterlink.app/native');
+        final native = await channel.invokeMethod<String>('androidDeviceId');
+        if (native != null && native.isNotEmpty) id = native;
+      }
+    } catch (error) {
+      debugPrint('device id unavailable: $error');
+    }
+    if (id.isEmpty) {
+      id = 'kd-${DateTime.now().microsecondsSinceEpoch.toRadixString(36)}';
+    }
+    _kami.deviceId = id;
+    unawaited(store.put(_kamiDeviceKey, id));
+    if (!_kamiDeviceReady.isCompleted) _kamiDeviceReady.complete();
+  }
+
+  /// 每 5 分钟复核一次卡密；失效即清掉本地记录并锁回验证页。
+  void _startKamiGuard(String code) {
+    _kamiGuard?.cancel();
+    _kamiGuard = Timer.periodic(_kamiGuardInterval, (_) async {
+      final current = _savedKami;
+      if (current.isEmpty) return;
+      try {
+        final result = await _kami.check(current);
+        if (result.ok) return;
+        await widget.services.store.put(_kamiKey, '');
+        if (!mounted) return;
+        setState(() {
+          _savedKami = '';
+          _passedKami = null;
+        });
+      } on KamiException {
+        // 网络波动不锁机，等下一轮复核。
+      }
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_initKamiDevice());
+  }
+
+  @override
+  void dispose() {
+    _kamiGuard?.cancel();
+    super.dispose();
   }
 
   @override
@@ -234,6 +298,7 @@ class _AsterLinkAppState extends State<AsterLinkApp> {
                   savedCode: _savedKami,
                   onSave: _saveKami,
                   onPassed: (code) => setState(() => _passedKami = code),
+                  deviceReady: _kamiDeviceReady.future,
                 )
               : SearchSecurityHost(
                   services,
