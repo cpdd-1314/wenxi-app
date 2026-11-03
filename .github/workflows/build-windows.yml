@@ -42,7 +42,21 @@ jobs:
       - name: Build Windows
         run: flutter build windows --release
 
-      - name: Package
+      - name: Install NSIS
+        run: choco install nsis -y --no-progress
+
+      - name: Build installer
+        shell: pwsh
+        run: |
+          $release = "build\windows\x64\runner\Release"
+          New-Item -ItemType Directory -Force -Path "installer\pkg" | Out-Null
+          Copy-Item "$release\*" -Destination "installer\pkg" -Recurse -Force
+          Copy-Item "$release\data\flutter_assets\assets\icons\app.ico" -Destination "installer\app.ico" -Force
+          Push-Location installer
+          & "C:\Program Files (x86)\NSIS\makensis.exe" installer.nsi
+          Pop-Location
+
+      - name: Package portable zip
         shell: pwsh
         run: |
           $dst = "asterlink-windows-x64.zip"
@@ -53,10 +67,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: asterlink-windows-x64
-          path: asterlink-windows-x64.zip
+          path: |
+            asterlink-windows-x64.zip
+            installer/asterlink-windows-x64-setup.exe
 
       - name: Attach to release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: asterlink-windows-x64.zip
+          files: |
+            asterlink-windows-x64.zip
+            installer/asterlink-windows-x64-setup.exe
