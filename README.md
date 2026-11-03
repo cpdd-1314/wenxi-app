@@ -107,7 +107,7 @@
 
 ## 下载
 
-在 [Releases]((https://github.com/cpdd-1314/wenxi-app/releases/tag/v2.1.0-windows)) 页面获取安装包。
+在 [Releases]( (https://github.com/cpdd-1314/wenxi-app/releases/tag/v2.1.0-windows) ) 页面获取安装包。
 
 | 平台 | 安装包 | 系统要求 |
 | --- | --- | --- |
