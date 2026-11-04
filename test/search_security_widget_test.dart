@@ -20,7 +20,8 @@ void main() {
     await (FontLoader(
       'MaterialIcons',
     )..addFont(rootBundle.load('fonts/MaterialIcons-Regular.otf'))).load();
-    final font = File('C:/Windows/Fonts/msyh.ttc');
+    // 参考图与 App 内置字体一致，不再依赖宿主系统装有微软雅黑。
+    final font = File('assets/fonts/NotoSansSC-Regular.otf');
     if (await font.exists()) {
       await (FontLoader('CaptchaFixture')..addFont(
             Future.value(ByteData.sublistView(await font.readAsBytes())),

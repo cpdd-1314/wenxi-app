@@ -31,6 +31,8 @@ class _ConnectionNative extends FakeNative {
 }
 
 void main() {
+  // 放宽卡密复核间隔，避免 5 分钟定时器长期占用测试绑定的假时钟。
+  AsterLinkApp.kamiGuardInterval = const Duration(hours: 1);
   testWidgets(
     'account direct settings show effective limit and bound custom and global connections',
     (tester) async {
@@ -66,7 +68,9 @@ void main() {
           await root.delete(recursive: true);
         });
       });
-      await tester.pumpWidget(AsterLinkApp(services, initialTab: 4));
+      await tester.pumpWidget(
+        AsterLinkApp(services, initialTab: 4, skipKamiGate: true),
+      );
       await tester.pumpAndSettle();
       Future<void> tap(Finder target) async {
         await tester.runAsync(() => tester.tap(target));
@@ -185,7 +189,9 @@ void main() {
             await root.delete(recursive: true);
           });
         });
-        await tester.pumpWidget(AsterLinkApp(services, initialTab: 3));
+        await tester.pumpWidget(
+          AsterLinkApp(services, initialTab: 3, skipKamiGate: true),
+        );
         await tester.pumpAndSettle();
         final badge = find.byKey(ValueKey('download-connections-$id'));
         expect(tester.widget<Text>(badge).data, '7 连接');

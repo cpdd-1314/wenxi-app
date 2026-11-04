@@ -152,6 +152,7 @@ class AsterLinkApp extends StatefulWidget {
     this.initialTab = 0,
     this.fontFamily,
     this.kamiService,
+    this.skipKamiGate = false,
   });
   final AppServices services;
   final int initialTab;
@@ -159,6 +160,13 @@ class AsterLinkApp extends StatefulWidget {
 
   /// 允许测试注入替身，正式运行时使用默认实现。
   final KamiService? kamiService;
+
+  /// 跳过启动卡密门禁，仅供界面测试使用；正式运行必须保持 false。
+  final bool skipKamiGate;
+
+  /// 定时复核卡密的间隔；正式运行每 5 分钟一次，测试可放宽以免长期占用
+  /// 测试绑定的假时钟。
+  static Duration kamiGuardInterval = const Duration(minutes: 5);
   @override
   State<AsterLinkApp> createState() => _AsterLinkAppState();
 }
@@ -168,13 +176,13 @@ class _AsterLinkAppState extends State<AsterLinkApp> {
   static const _kamiKey = 'kamiCode';
   static const _kamiExpireKey = 'kamiExpire';
   static const _kamiDeviceKey = 'kamiDevice';
-  static const _kamiGuardInterval = Duration(minutes: 5);
-  late final KamiService _kami =
-      widget.kamiService ?? KamiService();
+  late final KamiService _kami = widget.kamiService ?? KamiService();
   late String _savedKami = widget.services.store.data.str(_kamiKey);
 
   /// 校验通过的卡密；为空时停留在验证页。每次冷启动重新置空，重新验证。
-  String? _passedKami;
+  ///
+  /// 测试通过 [AsterLinkApp.skipKamiGate] 跳过门禁；门禁本身有独立测试。
+  late String? _passedKami = widget.skipKamiGate ? '' : null;
 
   /// 定时复核卡密的守护定时器；失效时把界面锁回验证页。
   Timer? _kamiGuard;
@@ -215,7 +223,7 @@ class _AsterLinkAppState extends State<AsterLinkApp> {
   /// 每 5 分钟复核一次卡密；失效即清掉本地记录并锁回验证页。
   void _startKamiGuard(String code) {
     _kamiGuard?.cancel();
-    _kamiGuard = Timer.periodic(_kamiGuardInterval, (_) async {
+    _kamiGuard = Timer.periodic(AsterLinkApp.kamiGuardInterval, (_) async {
       final current = _savedKami;
       if (current.isEmpty) return;
       try {
@@ -302,10 +310,7 @@ class _AsterLinkAppState extends State<AsterLinkApp> {
                 )
               : SearchSecurityHost(
                   services,
-                  child: MainShell(
-                    services,
-                    initialTab: widget.initialTab,
-                  ),
+                  child: MainShell(services, initialTab: widget.initialTab),
                 ),
         );
       },

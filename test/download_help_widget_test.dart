@@ -38,7 +38,7 @@ void main() {
             find.text('下载失败时，可查看 App 公告寻找解决办法，或使用「查找资源」功能更换网盘资源。'),
             findsOneWidget,
           );
-          
+
           expect(find.text('查找资源'), findsOneWidget);
           expect(tester.takeException(), isNull);
         }

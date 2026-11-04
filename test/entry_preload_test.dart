@@ -55,6 +55,8 @@ class _FrameHub extends ParserRuleHub {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  // 放宽卡密复核间隔，避免 5 分钟定时器长期占用测试绑定的假时钟。
+  AsterLinkApp.kamiGuardInterval = const Duration(hours: 1);
   Future<void> closeServices(WidgetTester tester, AppServices services) async {
     var closed = false;
     final closing = services.close().whenComplete(() => closed = true);
@@ -222,7 +224,7 @@ void main() {
           builder: (_) {
             expect(api.tokens, isEmpty);
             expect(hub.starts, isEmpty);
-            return AsterLinkApp(services);
+            return AsterLinkApp(services, skipKamiGate: true);
           },
         ),
       );

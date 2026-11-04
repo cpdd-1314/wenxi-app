@@ -31,6 +31,8 @@ class _BtNative extends FakeNative {
 }
 
 void main() {
+  // 放宽卡密复核间隔，避免 5 分钟定时器长期占用测试绑定的假时钟。
+  AsterLinkApp.kamiGuardInterval = const Duration(hours: 1);
   test('BT upload limit preserves default, explicit limit and unlimited', () {
     expect(AppSettings.fromJson({}).btUploadLimit, 512 * 1024);
     expect(
@@ -79,7 +81,9 @@ void main() {
         });
       });
       expect(native.begins.single['btUploadLimit'], 256 * 1024);
-      await tester.pumpWidget(AsterLinkApp(services, initialTab: 3));
+      await tester.pumpWidget(
+        AsterLinkApp(services, initialTab: 3, skipKamiGate: true),
+      );
       await tester.pumpAndSettle();
       final badge = find.byKey(ValueKey('download-connections-$id'));
       expect(tester.widget<Text>(badge).data, '8 来源');

@@ -49,6 +49,8 @@ class _ClipboardShare extends CloudConnector {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  // 放宽卡密复核间隔，避免 5 分钟定时器长期占用测试绑定的假时钟。
+  AsterLinkApp.kamiGuardInterval = const Duration(hours: 1);
   late AppServices services;
   late FakeHttp http;
   late _ClipboardShare connector;
@@ -102,7 +104,13 @@ void main() {
     connector = _ClipboardShare();
     services.cloud.connectors[CloudPlatform.uc] = connector;
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
-    await tester.pumpWidget(AsterLinkApp(services, initialTab: tab == 0 ? 0 : tab + 1));
+    await tester.pumpWidget(
+      AsterLinkApp(
+        services,
+        initialTab: tab == 0 ? 0 : tab + 1,
+        skipKamiGate: true,
+      ),
+    );
     await tester.pump(const Duration(milliseconds: 400));
     await tester.pumpAndSettle();
   }

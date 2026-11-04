@@ -1,5 +1,4 @@
 import 'dart:ui' show lerpDouble;
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../domain/appearance.dart';
 
@@ -124,9 +123,27 @@ ThemeData appTheme(
   GlassStyle glassStyle = GlassStyle.clear,
 }) {
   final dark = brightness == Brightness.dark;
-  final windows = defaultTargetPlatform == TargetPlatform.windows;
-  final resolvedFont = fontFamily ?? (windows ? 'Microsoft YaHei UI' : null);
-  final fallbackFonts = windows ? const ['Microsoft YaHei', 'Segoe UI'] : null;
+  // 优先使用内置字体，不再依赖系统是否装有中文字库。
+  //
+  // 之前 Windows 上硬编码 `Microsoft YaHei UI`：这个字体只在安装了中文
+  // 语言包的 Windows 上存在。英文/日文/韩文系统找不到它时，Flutter 会
+  // 逐字回退到系统字体，汉字常被日文（Yu Gothic）或韩文（Malgun Gothic）
+  // 字形顶上，出现「奇怪的字」甚至方块。
+  final resolvedFont = fontFamily ?? 'NotoSansSC';
+  const fallbackFonts = <String>[
+    'NotoSansSC',
+    // 简体汉字兜底（Windows/macOS 常见中文系统字体）。
+    'Microsoft YaHei UI',
+    'Microsoft YaHei',
+    'PingFang SC',
+    'Hiragino Sans GB',
+    'Source Han Sans SC',
+    'Noto Sans CJK SC',
+    // 非 Windows 平台缺失时退回各平台默认 UI 字体。
+    'Segoe UI',
+    'San Francisco',
+    'Roboto',
+  ];
   final tones = palette.colors(dark);
   final surface = Color(tones.surface);
   final colors =

@@ -24,6 +24,8 @@ import 'support.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  // 放宽卡密复核间隔，避免 5 分钟定时器长期占用测试绑定的假时钟。
+  AsterLinkApp.kamiGuardInterval = const Duration(hours: 1);
   bool systemFont = false;
   setUpAll(() async {
     for (final (family, asset) in [
@@ -35,7 +37,7 @@ void main() {
     ]) {
       await (FontLoader(family)..addFont(rootBundle.load(asset))).load();
     }
-    final font = File('C:/Windows/Fonts/msyh.ttc');
+    final font = File('assets/fonts/NotoSansSC-Regular.otf');
     if (await font.exists()) {
       final loader = FontLoader('FixtureUI')
         ..addFont(Future.value(ByteData.sublistView(await font.readAsBytes())));
@@ -169,6 +171,7 @@ void main() {
           child: AsterLinkApp(
             services,
             initialTab: tab == 0 ? 0 : tab + 1,
+            skipKamiGate: true,
             fontFamily: systemFont ? 'FixtureUI' : null,
           ),
         ),
@@ -517,7 +520,7 @@ void main() {
           await tester.pumpAndSettle();
         }
         expect(tester.takeException(), isNull);
-        // Reference images use the Windows Microsoft YaHei font.
+        // Reference images use the bundled Noto Sans SC font.
         // Other hosts still run all layout and interaction assertions.
         if (systemFont) {
           await expectLater(

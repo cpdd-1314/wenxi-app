@@ -52,6 +52,19 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  fonts:
+    # 内置中文字体：不依赖系统是否装有中文字库，
+    # 避免英文/日文/韩文 Windows 上汉字被回退成异体字或方块。
+    - family: NotoSansSC
+      fonts:
+        - asset: assets/fonts/NotoSansSC-Regular.otf
+          weight: 400
+        - asset: assets/fonts/NotoSansSC-Regular.otf
+          weight: 500
+        - asset: assets/fonts/NotoSansSC-Regular.otf
+          weight: 600
+        - asset: assets/fonts/NotoSansSC-Regular.otf
+          weight: 700
   shaders:
     - assets/shaders/liquid_glass.frag
   assets:

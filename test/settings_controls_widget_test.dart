@@ -34,6 +34,8 @@ class _SettingsProbe extends TransferHttp {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  // 放宽卡密复核间隔，避免 5 分钟定时器长期占用测试绑定的假时钟。
+  AsterLinkApp.kamiGuardInterval = const Duration(hours: 1);
   var systemFont = false;
 
   setUpAll(() async {
@@ -46,7 +48,8 @@ void main() {
     ]) {
       await (FontLoader(family)..addFont(rootBundle.load(asset))).load();
     }
-    final font = File('C:/Windows/Fonts/msyh.ttc');
+    // 参考图与 App 内置字体一致，不再依赖宿主系统装有微软雅黑。
+    final font = File('assets/fonts/NotoSansSC-Regular.otf');
     if (await font.exists()) {
       await (FontLoader('SettingsFixture')..addFont(
             Future.value(ByteData.sublistView(await font.readAsBytes())),
@@ -122,6 +125,7 @@ void main() {
         child: AsterLinkApp(
           services,
           initialTab: tab == 0 ? 0 : tab + 1,
+          skipKamiGate: true,
           fontFamily: systemFont ? 'SettingsFixture' : null,
         ),
       ),

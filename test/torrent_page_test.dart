@@ -97,7 +97,8 @@ void main() {
     ]) {
       await (FontLoader(family)..addFont(rootBundle.load(asset))).load();
     }
-    final file = File('C:/Windows/Fonts/msyh.ttc');
+    // 参考图与 App 内置字体一致，不再依赖宿主系统装有微软雅黑。
+    final file = File('assets/fonts/NotoSansSC-Regular.otf');
     if (await file.exists()) {
       await (FontLoader('FixtureUI')..addFont(
             Future.value(ByteData.sublistView(await file.readAsBytes())),

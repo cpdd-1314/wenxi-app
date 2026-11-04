@@ -13,6 +13,8 @@ import 'package:asterlink/ui/parse_page.dart';
 import 'support.dart';
 
 void main() {
+  // 放宽卡密复核间隔，避免 5 分钟定时器长期占用测试绑定的假时钟。
+  AsterLinkApp.kamiGuardInterval = const Duration(hours: 1);
   const input = 'https://删github.com/删diabl0w/删DFRoot/releases';
   const expected = 'https://github.com/diabl0w/DFRoot/releases';
   late AppServices services;
@@ -61,7 +63,7 @@ void main() {
       services.store.dispose();
     });
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
-    await tester.pumpWidget(AsterLinkApp(services));
+    await tester.pumpWidget(AsterLinkApp(services, skipKamiGate: true));
     await tester.pump(const Duration(milliseconds: 400));
     await tester.pumpAndSettle();
   }

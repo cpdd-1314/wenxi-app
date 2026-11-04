@@ -65,6 +65,8 @@ class _SwitchConnector extends BrowserTestConnector {
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  // 放宽卡密复核间隔，避免 5 分钟定时器长期占用测试绑定的假时钟。
+  AsterLinkApp.kamiGuardInterval = const Duration(hours: 1);
   const platform = CloudPlatform.tianyi;
 
   Future<void> tap(
@@ -404,7 +406,9 @@ void main() {
   testWidgets(
     'Cloud account management opens from the top right menu',
     (tester) => scenario(tester, (fixture, _) async {
-      await tester.pumpWidget(AsterLinkApp(fixture.services, initialTab: 2));
+      await tester.pumpWidget(
+        AsterLinkApp(fixture.services, initialTab: 2, skipKamiGate: true),
+      );
       await tester.pumpAndSettle();
       expect(find.text('账号管理'), findsNothing);
       expect(find.text('网盘收藏'), findsNothing);

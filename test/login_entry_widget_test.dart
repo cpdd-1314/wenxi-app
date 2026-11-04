@@ -63,6 +63,8 @@ class _ControlledStateStore extends ChangeNotifier implements StateStore {
 }
 
 void main() {
+  // 放宽卡密复核间隔，避免 5 分钟定时器长期占用测试绑定的假时钟。
+  AsterLinkApp.kamiGuardInterval = const Duration(hours: 1);
   TestWidgetsFlutterBinding.ensureInitialized();
   const platform = CloudPlatform.tianyi;
   final add = find.byKey(ValueKey('account-add-${platform.key}'));
@@ -109,7 +111,7 @@ void main() {
       store.dispose();
       directory.deleteSync(recursive: true);
     });
-    await tester.pumpWidget(AsterLinkApp(services, initialTab: 2));
+    await tester.pumpWidget(AsterLinkApp(services, initialTab: 2, skipKamiGate: true));
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('更多操作'));
     await tester.pumpAndSettle();
@@ -351,7 +353,7 @@ void main() {
           await diskDirectory.delete(recursive: true);
         });
       });
-      await tester.pumpWidget(AsterLinkApp(diskServices, initialTab: 2));
+      await tester.pumpWidget(AsterLinkApp(diskServices, initialTab: 2, skipKamiGate: true));
       await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('更多操作'));
       await tester.pumpAndSettle();

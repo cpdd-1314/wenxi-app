@@ -14,6 +14,8 @@ import 'support.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  // 放宽卡密复核间隔，避免 5 分钟定时器长期占用测试绑定的假时钟。
+  AsterLinkApp.kamiGuardInterval = const Duration(hours: 1);
   final active = <AppServices>[];
   var completedBatches = 0;
   const promptKey = ValueKey('mobile-data-download-prompt');
@@ -63,7 +65,7 @@ void main() {
     active.add(services);
     await tester.pumpWidget(
       shell
-          ? AsterLinkApp(services, initialTab: 4)
+          ? AsterLinkApp(services, initialTab: 4, skipKamiGate: true)
           : MaterialApp(
               theme: appTheme(Brightness.light),
               home: Scaffold(
